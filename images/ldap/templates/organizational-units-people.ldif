@@ -1,0 +1,5 @@
+dn: ou=People,${LDAP_BASE_DN}
+changetype: add
+objectClass: top
+objectClass: organizationalUnit
+ou: People

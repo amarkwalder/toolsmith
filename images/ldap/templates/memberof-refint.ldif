@@ -1,0 +1,7 @@
+dn: cn=module,cn=config
+changetype: add
+cn: module
+objectclass: olcModuleList
+objectclass: top
+olcmoduleload: refint.la
+olcmodulepath: /usr/lib/ldap

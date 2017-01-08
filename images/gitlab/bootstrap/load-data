@@ -1,0 +1,64 @@
+#!/bin/bash
+
+BASEDIR=$(dirname "$0")
+source ${BASEDIR}/load-data-utils
+PRIVATE_TOKEN=$( get-private-token-for-root "${GITLAB_ROOT_PASSWORD}" )
+
+# Sets the email adress of the admin (root) user
+# Full automation was not possible, the root user has to confirm it by
+# clicking on the link received in the email.
+#
+# Usage: set-email-for-root <email>
+set-email-for-root "gitlab@markwalder.eu"
+
+# Creates the OAuth2 Apps in Gitlab
+#
+# Usage: add-oauth-app <name> <app-id> <app-secret> <redirect-uri>
+add-oauth-app "Mattermost"  "${GITLAB_OAUTH_APP_MATTERMOST_ID}" "${GITLAB_OAUTH_APP_MATTERMOST_SECRET}" "https://mattermost.markwalder.local/signup/gitlab/complete
+https://mattermost.markwalder.local/login/gitlab/complete"
+add-oauth-app "Jenkins"     "${GITLAB_OAUTH_APP_JENKINS_ID}"    "${GITLAB_OAUTH_APP_JENKINS_SECRET}"    "https://jenkins.markwalder.local/securityRealm/finishLogin"
+add-oauth-app "Sonar"       "${GITLAB_OAUTH_APP_SONAR_ID}"      "${GITLAB_OAUTH_APP_SONAR_SECRET}"      "https://sonar.markwalder.local/oauth2/callback/gitlab"
+
+# Create the necessary users.
+#
+# Usage: create-user <email> <username> <password> <name>
+# --> No need for direct created gitlab users
+create-user "engineer.admin@markwalder.eu"  "engineer-admin"  "engineer-admin"  "Engineer Admin"
+create-user "engineer.user@markwalder.eu"   "engineer-user"   "engineer-user"   "Engineer User"
+
+# Create the private / public keys used for SSH access to gitlab. The script
+# copy the key material to the ${HOME}/.ssh directory. Afterwards it uploads
+# the public key to gitlab.
+#
+# Usage: generate-and-add-ssh-key-to-user <username>
+generate-and-add-ssh-key-to-user root             "gitlab.markwalder.local"
+generate-and-add-ssh-key-to-user engineer-admin   "gitlab.markwalder.local"
+generate-and-add-ssh-key-to-user engineer-user    "gitlab.markwalder.local"
+
+
+# Create groups in gitlab.
+#
+# Usage: create-group <group name> <path> <visibility>
+create-group hello-world hello-world 0
+
+
+# Add user to a group with a specific access level.
+#
+# access levels:
+# 10 => Guest access
+# 20 => Reporter access
+# 30 => Developer access
+# 40 => Master access
+# 50 => Owner access - Only valid for groups
+#
+# Usage: add-group-member <group name> <user name> <access level>
+add-group-member hello-world engineer-admin 40
+add-group-member hello-world engineer-user 30
+
+# Create projects in gitlab and assign it to a group.
+#
+# Usage: create-project <project name> <group name> <container-registry-enabled>
+create-project my-first-app           hello-world   false
+create-project my-first-app-frontend  hello-world   true
+create-project my-first-app-backend   hello-world   true
+create-project my-first-app-database  hello-world   true

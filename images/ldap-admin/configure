@@ -1,0 +1,12 @@
+#!/bin/bash
+
+BASEDIR=$(dirname "$0")
+source ${BASEDIR}/../../includes/functions.inc
+
+# Dockerfile
+subst templates/Dockerfile                                  Dockerfile
+
+# Environment
+mkdir -p ${BASEDIR}/environment/01-config
+subst templates/env-ldap-admin.startup.yaml                 environment/01-config/env-ldap-admin.startup.yaml
+subst templates/env-ldap-admin.yaml                         environment/01-config/env-ldap-admin.yaml

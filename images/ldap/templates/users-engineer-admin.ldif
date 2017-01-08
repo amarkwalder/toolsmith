@@ -1,0 +1,9 @@
+dn: cn=Engineer Admin,ou=People,${LDAP_BASE_DN}
+changetype: add
+cn: Engineer Admin
+sn: Engineer Admin
+uid: engineer-admin
+mail: ${LDAP_ENGINEER_ADMIN_EMAIL}
+objectClass: top
+objectClass: inetOrgPerson
+userPassword: {SSHA}KnPn38TFNEWkVMiog0oMAwgOsY3/BiAQ

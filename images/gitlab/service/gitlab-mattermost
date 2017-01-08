@@ -1,0 +1,13 @@
+#!/bin/bash
+
+# copy en.json from /opt/gitlab/embedded/service/mattermost/i18n/ to /opt/gitlab/embedded/service/mattermost/
+# make /opt/gitlab/embedded/service/mattermost/ your current directory
+# use sudo -u mattermost /opt/gitlab/embedded/bin/mattermost -config="/var/opt/gitlab/mattermost/config.json" ...
+# or su mattermost and then /opt/gitlab/embedded/bin/mattermost -config="/var/opt/gitlab/mattermost/config.json" ... if you didn't fuss to install sudo
+
+if [ ! -f /opt/gitlab/embedded/service/mattermost/en.json ]; then
+  cp /opt/gitlab/embedded/service/mattermost/i18n/en.json /opt/gitlab/embedded/service/mattermost/
+fi
+
+CMD="cd /opt/gitlab/embedded/service/mattermost/; /opt/gitlab/embedded/bin/mattermost -config=/var/opt/gitlab/mattermost/config.json $@;"
+runuser -s /bin/bash - mattermost -c "${CMD}"

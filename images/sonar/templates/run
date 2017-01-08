@@ -1,0 +1,51 @@
+#!/bin/bash
+
+function start-sonar() {
+  SONARQUBE_JDBC_USERNAME=${SONARQUBE_JDBC_USERNAME}
+  SONARQUBE_JDBC_URL=${SONARQUBE_JDBC_URL}
+  SONARQUBE_WEB_JVM_OPTS=${SONARQUBE_WEB_JVM_OPTS}
+  /opt/sonarqube/bin/run.sh
+}
+
+function load-data() {
+  /container/bootstrap/load-data
+}
+
+function wait-for-sonar() {
+  for i in {1..3}; do
+    while ! $(curl --output /dev/null --silent --head --fail http://localhost:9000); do
+      echo " ---> Trying to connect to Sonar Server - $(date)"
+      sleep 10
+    done
+    echo " ---> Successfully connected ($i/3) - $(date)"
+    sleep 10
+  done
+}
+
+function _term() {
+  echo "Caught SIGTERM or SIGINT signal!"
+  kill -TERM "$LOAD_PID" 2>/dev/null
+  kill -TERM "$SONAR_PID" 2>/dev/null
+}
+
+trap _term SIGTERM SIGINT
+
+FIRST_START_DONE="/var/opt/sonarqube/sonar-first-start-done"
+if [ ! -e "${FIRST_START_DONE}" ]; then
+
+  ( start-sonar ) &
+  SONAR_PID=$!
+
+  ( wait-for-sonar; load-data; touch ${FIRST_START_DONE} ) &
+  LOAD_PID=$!
+
+  wait "$LOAD_PID"
+
+  killall -9 java
+
+fi
+
+( start-sonar ) &
+SONAR_PID=$!
+
+wait "$SONAR_PID"

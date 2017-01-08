@@ -1,0 +1,25 @@
+#!/bin/bash
+
+BASEDIR=$(dirname "$0")
+source ${BASEDIR}/../../includes/functions.inc
+
+# Dockerfile
+subst templates/Dockerfile                        Dockerfile
+
+# Bootstrap
+mkdir -p ${BASEDIR}/bootstrap
+subst templates/load-data         '${GITLAB_EMAIL_FROM}'  bootstrap/load-data.tmp.1
+subst bootstrap/load-data.tmp.1   '${SONAR_HOSTNAME}'     bootstrap/load-data.tmp.2
+subst bootstrap/load-data.tmp.2   '${GITLAB_HOSTNAME}'    bootstrap/load-data
+rm ${BASEDIR}/bootstrap/load-data.tmp.*
+
+# Service
+mkdir -p ${BASEDIR}/service
+subst templates/run       '${SONARQUBE_JDBC_USERNAME}'  service/run.tmp.1
+subst service/run.tmp.1   '${SONARQUBE_JDBC_URL}'       service/run.tmp.2
+subst service/run.tmp.2   '${SONARQUBE_WEB_JVM_OPTS}'   service/run
+rm ${BASEDIR}/service/run.tmp.*
+
+# Set file permissions
+chmod u+x ${BASEDIR}/bootstrap/load-data
+chmod u+x ${BASEDIR}/service/run

@@ -1,0 +1,26 @@
+#!/bin/bash
+
+BASEDIR=$(dirname "$0")
+source ${BASEDIR}/../../includes/functions.inc
+
+# Dockerfile
+subst templates/Dockerfile      Dockerfile
+
+# Bootstrap
+mkdir -p ${BASEDIR}/bootstrap
+subst templates/load-data       '${GITLAB_EMAIL_FROM}'                          bootstrap/load-data.tmp.1
+subst bootstrap/load-data.tmp.1 '${LDAP_ENGINEER_ADMIN_EMAIL}'                  bootstrap/load-data.tmp.2
+subst bootstrap/load-data.tmp.2 '${LDAP_ENGINEER_USER_EMAIL}'                   bootstrap/load-data.tmp.3
+subst bootstrap/load-data.tmp.3 '${GITLAB_OAUTH_APP_MATTERMOST_REDIRCT_URI}'    bootstrap/load-data.tmp.4
+subst bootstrap/load-data.tmp.4 '${GITLAB_OAUTH_APP_JENKINS_REDIRCT_URI}'       bootstrap/load-data.tmp.5
+subst bootstrap/load-data.tmp.5 '${GITLAB_OAUTH_APP_SONAR_REDIRCT_URI}'         bootstrap/load-data.tmp.6
+subst bootstrap/load-data.tmp.6 '${GITLAB_HOSTNAME}'                            bootstrap/load-data
+rm ${BASEDIR}/bootstrap/load-data.tmp.*
+
+# Environment
+mkdir -p ${BASEDIR}/environment
+subst templates/gitlab.rb     environment/gitlab.rb
+
+# Set file permissions
+chmod u+x ${BASEDIR}/service/run
+chmod u+x ${BASEDIR}/bootstrap/load-data

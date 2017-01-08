@@ -1,0 +1,48 @@
+#!/bin/bash
+
+function start-gitlab() {
+  /assets/wrapper
+}
+
+function load-data() {
+  /container/bootstrap/load-data
+}
+
+function wait-for-gitlab() {
+  for i in {1..3}; do
+    while ! $(curl --output /dev/null --silent --head --fail http://localhost:8181); do
+      echo "Trying to connect to Gitlab Server - $(date)"
+      sleep 10
+    done
+    echo "Successfully connected ($i/3) - $(date)"
+    sleep 10
+  done
+}
+
+function _term() {
+  echo "Caught SIGTERM or SIGINT signal!"
+  kill -TERM "$LOAD_PID" 2>/dev/null
+  kill -TERM "$GITLAB_PID" 2>/dev/null
+}
+
+trap _term SIGTERM SIGINT
+
+FIRST_START_DONE="/etc/gitlab/gitlab-first-start-done"
+if [ ! -e "${FIRST_START_DONE}" ]; then
+
+  ( start-gitlab ) &
+  GITLAB_PID=$!
+
+  ( wait-for-gitlab; load-data; touch ${FIRST_START_DONE} ) &
+  LOAD_PID=$!
+
+  wait "$LOAD_PID" "$GITLAB_PID"
+
+else
+
+  ( start-gitlab ) &
+  GITLAB_PID=$!
+
+  wait "$GITLAB_PID"
+
+fi

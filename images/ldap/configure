@@ -1,0 +1,24 @@
+#!/bin/bash
+
+BASEDIR=$(dirname "$0")
+source ${BASEDIR}/../../includes/functions.inc
+
+# Dockerfile
+subst templates/Dockerfile                                  Dockerfile
+
+# Environment
+mkdir -p ${BASEDIR}/environment/01-config
+subst templates/env-ldap.startup.yaml                       environment/01-config/env-ldap.startup.yaml
+
+# Bootstrap
+mkdir -p ${BASEDIR}/bootstrap/ldif
+subst templates/memberof-config.ldif                        bootstrap/ldif/11-memberof-config-1.ldif
+subst templates/memberof-overlay.ldif                       bootstrap/ldif/12-memberof-config-2.ldif
+subst templates/memberof-refint.ldif                        bootstrap/ldif/13-memberof-refint-1.ldif
+subst templates/memberof-refint-overlay.ldif                bootstrap/ldif/14-memberof-refint-2.ldif
+subst templates/organizational-units-people.ldif            bootstrap/ldif/21-organizational-units-1.ldif
+subst templates/organizational-units-groups.ldif            bootstrap/ldif/22-organizational-units-2.ldif
+subst templates/users-engineer-admin.ldif                   bootstrap/ldif/23-users-1.ldif
+subst templates/users-engineer-user.ldif                    bootstrap/ldif/24-users-2.ldif
+subst templates/groups-admins.ldif                          bootstrap/ldif/25-groups-1.ldif
+subst templates/groups-devs.ldif                            bootstrap/ldif/26-groups-2.ldif

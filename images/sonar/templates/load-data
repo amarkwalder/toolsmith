@@ -1,0 +1,33 @@
+#!/bin/bash
+set -e
+
+psql -v ON_ERROR_STOP=1 -h sonar-db -d sonar --username sonar <<-EOSQL
+  INSERT INTO users(login,name,email,active,created_at,updated_at,external_identity,external_identity_provider,user_local,is_root)
+  VALUES('root','Administrator','${GITLAB_EMAIL_FROM}','t',(extract(epoch from now()) * 1000)::bigint,(extract(epoch from now()) * 1000)::bigint,'root','gitlab','f','t');
+
+  INSERT INTO groups_users(user_id, group_id)
+  SELECT
+    (SELECT id FROM users WHERE login = 'root' AND external_identity_provider = 'gitlab') as user_id,
+    (SELECT id FROM groups WHERE name = 'sonar-administrators') as group_id;
+
+  INSERT INTO properties(prop_key,text_value,is_empty,created_at)
+  VALUES('sonar.auth.gitlab.enabled','true','f',(extract(epoch from now()) * 1000)::bigint);
+
+  INSERT INTO properties(prop_key,text_value,is_empty,created_at)
+  VALUES('sonar.auth.gitlab.applicationId','${GITLAB_OAUTH_APP_SONAR_ID}','f',(extract(epoch from now()) * 1000)::bigint);
+
+  INSERT INTO properties(prop_key,text_value,is_empty,created_at)
+  VALUES('sonar.auth.gitlab.secret','${GITLAB_OAUTH_APP_SONAR_SECRET}','f',(extract(epoch from now()) * 1000)::bigint);
+
+  INSERT INTO properties(prop_key,text_value,is_empty,created_at)
+  VALUES('sonar.core.serverBaseURL','https://${SONAR_HOSTNAME}','f',(extract(epoch from now()) * 1000)::bigint);
+
+  INSERT INTO properties(prop_key,text_value,is_empty,created_at)
+  VALUES('sonar.auth.gitlab.url','https://${GITLAB_HOSTNAME}','f',(extract(epoch from now()) * 1000)::bigint);
+
+  INSERT INTO properties(prop_key,text_value,is_empty,created_at)
+  VALUES('sonar.forceAuthentication','true','f',(extract(epoch from now()) * 1000)::bigint);
+
+  INSERT INTO properties(prop_key,text_value,is_empty,created_at)
+  VALUES('sonar.auth.gitlab.allowUsersToSignUp','true','f',(extract(epoch from now()) * 1000)::bigint);
+EOSQL

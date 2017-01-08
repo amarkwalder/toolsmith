@@ -1,0 +1,57 @@
+#!/bin/bash
+
+if [[ ! ${PROJECT_ROOT_DIR+x} ]]; then
+  echo "Environment variable 'PROJECT_ROOT_DIR' is not set!"
+  exit 1
+fi
+
+BASEDIR=$(dirname "$0")
+source ${PROJECT_ROOT_DIR}/conf/.env-config
+
+function create-cert() {
+  openssl genrsa -out "${PROJECT_ROOT_DIR}/certs/$1.key" ${CERT_KEY_LENGTH}
+  openssl req -new -key "${PROJECT_ROOT_DIR}/certs/$1.key" -out "${PROJECT_ROOT_DIR}/certs/$1.csr" -subj "/C=${CERT_COUNTRY}/ST=${CERT_STATE}/L=${CERT_LOCATION}/O=${CERT_ORGANIZATION}/OU=${CERT_ORGNIZATIONAL_UNIT}/CN=$1"
+  openssl x509 -req -days 365 -in "${PROJECT_ROOT_DIR}/certs/$1.csr" -signkey "${PROJECT_ROOT_DIR}/certs/$1.key"  -out "${PROJECT_ROOT_DIR}/certs/$1.crt"
+}
+
+function prep-keystore() {
+  rm -f ${PROJECT_ROOT_DIR}/certs/cacerts
+  cp ${BASEDIR}/cacerts ${PROJECT_ROOT_DIR}/certs/cacerts
+  chmod u+w ${PROJECT_ROOT_DIR}/certs/cacerts
+}
+
+function add-cacert() {
+  keytool -import -trustcacerts -alias $1 -keystore ${PROJECT_ROOT_DIR}/certs/cacerts -storepass changeit -file ${PROJECT_ROOT_DIR}/certs/$1.crt -noprompt
+  keytool -list -keystore ${PROJECT_ROOT_DIR}/certs/cacerts -storepass changeit -alias $1
+  echo ""
+}
+
+function finalize-keystore() {
+  chmod u-w ${PROJECT_ROOT_DIR}/certs/cacerts
+}
+
+mkdir -p ${PROJECT_ROOT_DIR}/certs/
+
+prep-keystore
+
+create-cert ${LDAP_ADMIN_HOSTNAME}
+create-cert ${LDAP_HOSTNAME}
+create-cert ${GITLAB_HOSTNAME}
+create-cert ${DOCKER_REGISTRY_HOSTNAME}
+create-cert ${MATTERMOST_HOSTNAME}
+create-cert ${JENKINS_HOSTNAME}
+create-cert ${SONAR_HOSTNAME}
+create-cert ${NEXUS_HOSTNAME}
+create-cert ${SELENIUM_HOSTNAME}
+
+add-cacert ${LDAP_HOSTNAME}
+add-cacert ${LDAP_ADMIN_HOSTNAME}
+add-cacert ${GITLAB_HOSTNAME}
+add-cacert ${DOCKER_REGISTRY_HOSTNAME}
+add-cacert ${MATTERMOST_HOSTNAME}
+add-cacert ${JENKINS_HOSTNAME}
+add-cacert ${SONAR_HOSTNAME}
+add-cacert ${NEXUS_HOSTNAME}
+add-cacert ${SELENIUM_HOSTNAME}
+
+finalize-keystore

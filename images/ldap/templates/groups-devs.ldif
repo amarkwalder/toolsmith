@@ -1,0 +1,8 @@
+dn: cn=Developers,ou=Groups,${LDAP_BASE_DN}
+changetype: add
+objectClass: top
+objectClass: groupOfNames
+cn: Developers
+description: Developers Group
+member: cn=Engineer Admin,ou=People,${LDAP_BASE_DN}
+member: cn=Engineer User,ou=People,${LDAP_BASE_DN}

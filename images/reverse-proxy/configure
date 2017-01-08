@@ -1,0 +1,18 @@
+#!/bin/bash
+
+BASEDIR=$(dirname "$0")
+source ${BASEDIR}/../../includes/functions.inc
+
+# Dockerfile
+subst templates/Dockerfile        Dockerfile
+
+# Environment
+mkdir -p ${BASEDIR}/environment
+subst templates/gitlab.conf       '${GITLAB_HOSTNAME}'            environment/gitlab.conf
+subst templates/jenkins.conf      '${JENKINS_HOSTNAME}'           environment/jenkins.conf
+subst templates/ldap-admin.conf   '${LDAP_ADMIN_HOSTNAME}'        environment/ldap-admin.conf
+subst templates/mattermost.conf   '${MATTERMOST_HOSTNAME}'        environment/mattermost.conf
+subst templates/nexus.conf        '${NEXUS_HOSTNAME}'             environment/nexus.conf
+subst templates/registry.conf     '${DOCKER_REGISTRY_HOSTNAME}'   environment/registry.conf
+subst templates/selenium.conf     '${SELENIUM_HOSTNAME}'          environment/selenium.conf
+subst templates/sonar.conf        '${SONAR_HOSTNAME}'             environment/sonar.conf

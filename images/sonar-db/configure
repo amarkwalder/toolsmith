@@ -1,0 +1,17 @@
+#!/bin/bash
+
+BASEDIR=$(dirname "$0")
+source ${BASEDIR}/../../includes/functions.inc
+
+# Dockerfile
+subst templates/Dockerfile                        Dockerfile
+
+# Bootstrap
+mkdir -p ${BASEDIR}/bootstrap
+subst templates/init-sonar-db.sh        '${GITLAB_EMAIL_FROM}'  bootstrap/init-sonar-db.sh.tmp.1
+subst bootstrap/init-sonar-db.sh.tmp.1  '${SONAR_HOSTNAME}'     bootstrap/init-sonar-db.sh.tmp.2
+subst bootstrap/init-sonar-db.sh.tmp.2  '${GITLAB_HOSTNAME}'    bootstrap/init-sonar-db.sh
+rm ${BASEDIR}/bootstrap/init-sonar-db.sh.tmp.*
+
+# Set file permissions
+chmod u+x ${BASEDIR}/bootstrap/init-sonar-db.sh

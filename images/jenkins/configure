@@ -1,0 +1,13 @@
+#!/bin/bash
+
+BASEDIR=$(dirname "$0")
+source ${BASEDIR}/../../includes/functions.inc
+
+# Dockerfile
+subst templates/Dockerfile                  Dockerfile
+
+# Bootstrap
+mkdir -p ${BASEDIR}/bootstrap/
+subst templates/setup-admin.groovy          bootstrap/setup-admin.groovy
+subst templates/setup-gitlab-oauth.groovy   bootstrap/setup-gitlab-oauth.groovy
+echo "true" > ${BASEDIR}/bootstrap/setup-gitlab-oauth.groovy.done

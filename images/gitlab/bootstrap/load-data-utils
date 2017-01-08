@@ -1,0 +1,252 @@
+#!/bin/bash
+
+get-private-token-for-root() {
+  if [[ $# != 1 ]] ; then
+      echo "Parameter 'password' is missing!"
+      exit 1
+  fi
+  PARAM_PWD=$1
+  curl -sSLk -X POST "http://localhost:8181/api/v3/session?login=root&password=${PARAM_PWD}" | jq -r .private_token
+}
+
+add-oauth-app() {
+  if [[ $# != 4 ]] ; then
+      echo "Parameter 'app name', 'uid', 'secret' and/or 'redirect uri' is missing!"
+      exit 1
+  fi
+  PARAM_OAUTH_APP_NAME=$1
+  PARAM_OAUTH_APP_UID=$2
+  PARAM_OAUTH_APP_SECRET=$3
+  PARAM_OAUTH_APP_REDIRECT_URI=$4
+  gitlab-psql -d gitlabhq_production << EOSQL
+    INSERT INTO oauth_applications(name,uid,secret,redirect_uri)
+    VALUES('${PARAM_OAUTH_APP_NAME}','${PARAM_OAUTH_APP_UID}','${PARAM_OAUTH_APP_SECRET}','${PARAM_OAUTH_APP_REDIRECT_URI}');
+EOSQL
+  echo "Create OAuth2 App --> ${PARAM_OAUTH_APP_NAME}"
+}
+
+set-email-for-root() {
+  if [[ $# != 1 ]] ; then
+      echo "Parameter 'e-mail' is missing!"
+      exit 1
+  fi
+  PARAM_EMAIL=$1
+
+  USER_ID=$( search-user-id root )
+  if [ "${RESULT}" == "Not Found" ]; then
+    echo "User '${PARAM_USER}' not found"
+    exit 1
+  fi
+
+  RESULT=$( \
+    curl -sSLk -X PUT --header "PRIVATE-TOKEN: ${PRIVATE_TOKEN}" \
+    --data "email=${PARAM_EMAIL}" \
+    "http://localhost:8181/api/v3/users/${USER_ID}" | \
+    jq -r .email \
+  )
+  echo "Set E-Mail for user root --> ${PARAM_EMAIL}"
+}
+
+search-user-id() {
+  if [[ $# != 1 ]] ; then
+      echo "Parameter 'user' is missing!"
+      exit 1
+  fi
+  PARAM_USER=$1
+
+  RESULT=$( \
+    curl -sSLk -X GET --header "PRIVATE-TOKEN: ${PRIVATE_TOKEN}" \
+    "http://localhost:8181/api/v3/users?username=${PARAM_USER}" | \
+    jq -r .[0].id \
+  )
+  if [ "${RESULT}" == "null" ]; then
+    RESULT="Not Found"
+  fi
+  echo ${RESULT}
+}
+
+search-group-id() {
+  if [[ $# != 1 ]] ; then
+      echo "Parameter 'group-name' is missing!"
+      exit 1
+  fi
+  PARAM_GROUP_NAME=$1
+
+  RESULT=$( \
+    curl -sSLk -X GET --header "PRIVATE-TOKEN: ${PRIVATE_TOKEN}" \
+    "http://localhost:8181/api/v3/groups?search=${PARAM_GROUP_NAME}" | \
+    jq -r .[0].id \
+  )
+  if [ "${RESULT}" == "null" ]; then
+    RESULT="Not Found"
+  fi
+  echo ${RESULT}
+}
+
+generate-and-add-ssh-key-to-user() {
+  if [[ $# != 2 ]] ; then
+      echo "Parameter 'user' and/or 'gitlab hostname' is missing!"
+      exit 1
+  fi
+  PARAM_USER=$1
+  PARAM_GITLAB_HOSTNAME=$2
+
+  USER_ID=$( search-user-id ${PARAM_USER} )
+  if [ "${USER_ID}" == "Not Found" ]; then
+    echo "User '${PARAM_USER}' not found"
+    exit 1
+  fi
+
+  if [ -f ${HOME}/.ssh/${PARAM_GITLAB_HOSTNAME}_${PARAM_USER}_id_rsa ]; then
+    mv ${HOME}/.ssh/${PARAM_GITLAB_HOSTNAME}_${PARAM_USER}_id_rsa ${HOME}/.ssh/${PARAM_GITLAB_HOSTNAME}_${PARAM_USER}_id_rsa.org
+  fi
+  if [ -f ${HOME}/.ssh/${PARAM_GITLAB_HOSTNAME}_${PARAM_USER}_id_rsa.pub ]; then
+    mv ${HOME}/.ssh/${PARAM_GITLAB_HOSTNAME}_${PARAM_USER}_id_rsa.pub ${HOME}/.ssh/${PARAM_GITLAB_HOSTNAME}_${PARAM_USER}_id_rsa.pub.org
+  fi
+  ssh-keygen -q -t rsa -C "GitLab ${PARAM_USER} - ${PARAM_GITLAB_HOSTNAME}" -b 4096 -N '' -f ${HOME}/.ssh/${PARAM_GITLAB_HOSTNAME}_${PARAM_USER}_id_rsa
+
+  PUBLIC_KEY=$(cat ${HOME}/.ssh/${PARAM_GITLAB_HOSTNAME}_${PARAM_USER}_id_rsa.pub)
+  RESULT_JSON=$( \
+    curl -sSLk -X POST --header "PRIVATE-TOKEN: ${PRIVATE_TOKEN}" \
+    --data-urlencode "title=GitLab ${PARAM_USER} - ${PARAM_GITLAB_HOSTNAME}" \
+    --data-urlencode "key=${PUBLIC_KEY}" \
+    "http://localhost:8181/api/v3/users/${USER_ID}/keys" \
+  )
+  RESULT=$( echo ${RESULT_JSON} | jq -r .id )
+  if [ "${RESULT}" == "null" ]; then
+    RESULT="Failed to add ssh key to user '${PARAM_USER}': $( echo ${RESULT_JSON} | jq -r .message )"
+    echo ${RESULT}
+    exit 1
+  else
+    RESULT="SSH key sucessfully created and added to user '${PARAM_USER}'"
+    echo ${RESULT}
+  fi
+}
+
+create-user() {
+  if [[ $# != 4 ]] ; then
+      echo "Parameter 'e-mail', 'username', 'password' or 'name' is missing!"
+      exit 1
+  fi
+  PARAM_EMAIL=$1
+  PARAM_USERNAME=$2
+  PARAM_PWD=$3
+  PARAM_NAME=$4
+
+  RESULT_JSON=$( \
+    curl -sSLk -X POST --header "PRIVATE-TOKEN: ${PRIVATE_TOKEN}" \
+    --data "email=${PARAM_EMAIL}" \
+    --data "password=${PARAM_PWD}" \
+    --data "username=${PARAM_USERNAME}" \
+    --data "name=${PARAM_NAME}" \
+    "http://localhost:8181/api/v3/users" \
+  )
+  RESULT=$( echo ${RESULT_JSON} | jq -r .id )
+  if [ "${RESULT}" == "null" ]; then
+    RESULT="Failed to create user '${PARAM_USERNAME}': $( echo ${RESULT_JSON} | jq -r .message )"
+    echo ${RESULT}
+    exit 1
+  else
+    RESULT="User '${PARAM_USERNAME}' sucessfully created"
+    echo ${RESULT}
+  fi
+}
+
+create-group() {
+  if [[ $# != 3 ]] ; then
+      echo "Parameter 'name', 'path' or 'visibility' is missing!"
+      exit 1
+  fi
+  PARAM_GROUP_NAME=$1
+  PARAM_GROUP_PATH=$2
+  PARAM_GROUP_VISIBILITY_LEVEL=$3
+
+  RESULT_JSON=$( \
+    curl -sSLk -X POST --header "PRIVATE-TOKEN: ${PRIVATE_TOKEN}" \
+    --data "name=${PARAM_GROUP_NAME}" \
+    --data "path=${PARAM_GROUP_PATH}" \
+    --data "visibility_level=${PARAM_GROUP_VISIBILITY_LEVEL}" \
+    "http://localhost:8181/api/v3/groups" \
+  )
+  RESULT=$( echo ${RESULT_JSON} | jq -r .id )
+  if [ "${RESULT}" == "null" ]; then
+    RESULT="Failed to create group '${PARAM_GROUP_NAME}': $( echo ${RESULT_JSON} | jq -r .message )"
+    echo ${RESULT}
+    exit 1
+  else
+    RESULT="Group '${PARAM_GROUP_NAME}' sucessfully created"
+    echo ${RESULT}
+  fi
+}
+
+create-project() {
+  if [[ $# != 3 ]] ; then
+      echo "Parameter 'project-name', 'group-name' or 'container-registry-enabled' is missing!"
+      exit 1
+  fi
+  PARAM_PROJECT_NAME=$1
+  PARAM_GROUP_NAME=$2
+  PARAM_CONTAINER_REGISTRY_ENABLED=$3
+
+  GROUP_ID=$( search-group-id ${PARAM_GROUP_NAME} )
+  if [ "${GROUP_ID}" == "Not Found" ]; then
+    echo "Group '${PARAM_GROUP_NAME}' not found"
+    exit 1
+  fi
+
+  RESULT_JSON=$( \
+    curl -sSLk -X POST --header "PRIVATE-TOKEN: ${PRIVATE_TOKEN}" \
+    --data "name=${PARAM_PROJECT_NAME}" \
+    --data "namespace_id=${GROUP_ID}" \
+    --data "container_registry_enabled=${PARAM_CONTAINER_REGISTRY_ENABLED}" \
+    "http://localhost:8181/api/v3/projects" \
+  )
+
+  RESULT=$( echo ${RESULT_JSON} | jq -r .id )
+  if [ "${RESULT}" == "null" ]; then
+    RESULT="Failed to create project '${PARAM_PROJECT_NAME}': $( echo ${RESULT_JSON} | jq -r .message )"
+    echo ${RESULT}
+    exit 1
+  else
+    RESULT="Project '${PARAM_PROJECT_NAME}' sucessfully created"
+    echo ${RESULT}
+  fi
+}
+
+add-group-member() {
+  if [[ $# != 3 ]] ; then
+      echo "Parameter 'group-name', 'username' or 'access-level' is missing!"
+      exit 1
+  fi
+  PARAM_GROUP_NAME=$1
+  PARAM_USERNAME=$2
+  PARAM_ACCESS_LEVEL=$3
+
+  GROUP_ID=$( search-group-id ${PARAM_GROUP_NAME} )
+  if [ "${GROUP_ID}" == "Not Found" ]; then
+    echo "Group '${PARAM_GROUP_NAME}' not found"
+    exit 1
+  fi
+
+  USER_ID=$( search-user-id ${PARAM_USERNAME} )
+  if [ "${USER_ID}" == "Not Found" ]; then
+    echo "User '${PARAM_USER}' not found"
+    exit 1
+  fi
+
+  RESULT_JSON=$( \
+    curl -sSLk -X POST --header "PRIVATE-TOKEN: ${PRIVATE_TOKEN}" \
+    --data "user_id=${USER_ID}" \
+    --data "access_level=${PARAM_ACCESS_LEVEL}" \
+    "http://localhost:8181/api/v3/groups/${GROUP_ID}/members" \
+  )
+  RESULT=$( echo ${RESULT_JSON} | jq -r .id )
+  if [ "${RESULT}" == "null" ]; then
+    RESULT="Failed to add user '${PARAM_USERNAME}' to group '${PARAM_GROUP_NAME}': $( echo ${RESULT_JSON} | jq -r .message )"
+    echo ${RESULT}
+    exit 1
+  else
+    RESULT="Sucessfully added user '${PARAM_USERNAME}' to group '${PARAM_GROUP_NAME}'"
+    echo ${RESULT}
+  fi
+}
