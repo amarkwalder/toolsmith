@@ -27,6 +27,7 @@ certs:
 	$(call colorecho,"= Create Certificates for Toolsmith")
 	$(call colorecho,"===================================")
 	@exec $(MAKE) -C certs build
+	@exec $(MAKE) -C certs copy
 
 images:
 	$(call sep)

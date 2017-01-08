@@ -14,11 +14,20 @@ endef
 
 clean:
 	$(call colorecho,"Cleanup directory")
+	-rm -f cacerts
 	-rm -f *.key
 	-rm -f *.csr
 	-rm -f *.crt
 
 build: .build
 .build:
-	$(call colorecho,"Create Certificates")
+	$(call colorecho,"Create certificates")
 	./create-certs
+
+copy: build
+	$(call colorecho,"Copy certificates to '${PROJECT_ROOT_DIR}/certs/'")
+	mkdir -p ${PROJECT_ROOT_DIR}/certs/
+	cp cacerts ${PROJECT_ROOT_DIR}/certs/
+	cp *.key ${PROJECT_ROOT_DIR}/certs/
+	cp *.csr ${PROJECT_ROOT_DIR}/certs/
+	cp *.crt ${PROJECT_ROOT_DIR}/certs/
