@@ -7,6 +7,7 @@ VERSION = ${DOCKER_JENKINS_IMAGE_VERSION}
 
 clean:
 	$(call colorecho,"Cleanup directory")
+	-docker rmi $(NAME):$(VERSION)
 	-rm -f .configure
 	-rm -f .build
 	-rm -f .push
