@@ -1,0 +1,8 @@
+environment/gitlab.conf
+environment/jenkins.conf
+environment/ldap-admin.conf
+environment/mattermost.conf
+environment/nexus.conf
+environment/registry.conf
+environment/selenium.conf
+environment/sonar.conf
