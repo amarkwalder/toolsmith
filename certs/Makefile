@@ -14,7 +14,9 @@ endef
 
 clean:
 	$(call colorecho,"Cleanup directory")
-	-rm -rf ${PROJECT_ROOT_DIR}/certs
+	-rm -f *.key
+	-rm -f *.csr
+	-rm -f *.crt
 
 build: .build
 .build:
