@@ -1,9 +1,3 @@
-ifndef PROJECT_ROOT_DIR
-    $(error PROJECT_ROOT_DIR is undefined)
-endif
-
-include $(PROJECT_ROOT_DIR)/conf/.env-config
-
 define sep
 	@echo ""
 	@echo ""
@@ -15,12 +9,29 @@ endef
 
 .PHONY: clean certs images
 
-clean:
+#-------------------------------------------------------------------------------
+
+clean-all:
 	$(call sep)
 	$(call colorecho,"= Cleanup Toolsmith")
 	$(call colorecho,"===================")
 	@exec $(MAKE) -C certs clean
 	@exec $(MAKE) -C images clean
+
+#-------------------------------------------------------------------------------
+
+project:
+	$(call sep)
+	$(call colorecho,"= Create a Project")
+	$(call colorecho,"==================")
+	@exec $(MAKE) -C project-template project
+#-------------------------------------------------------------------------------
+
+clean-certs:
+	$(call sep)
+	$(call colorecho,"= Cleanup Toolsmith (Certificates)")
+	$(call colorecho,"==================================")
+	@exec $(MAKE) -C certs clean
 
 certs:
 	$(call sep)
@@ -29,9 +40,19 @@ certs:
 	@exec $(MAKE) -C certs build
 	@exec $(MAKE) -C certs copy
 
+#-------------------------------------------------------------------------------
+
+clean-images:
+	$(call sep)
+	$(call colorecho,"= Cleanup Toolsmith (Docker Images)")
+	$(call colorecho,"===================================")
+	@exec $(MAKE) -C images clean
+
 images:
 	$(call sep)
 	$(call colorecho,"= Create Docker Images")
 	$(call colorecho,"======================")
 	@exec $(MAKE) -C images build
-	@exec docker images -f label=$(DOCKER_LABEL_GROUP)
+	@exec docker images
+
+#-------------------------------------------------------------------------------

@@ -1,0 +1,103 @@
+version: '2'
+
+services:
+
+  ldap:
+    image: ${DOCKER_REGISTRY}/${DOCKER_NAMESPACE}/${DOCKER_LDAP_IMAGE_NAME}:${DOCKER_LDAP_IMAGE_VERSION}
+    env_file:
+      - ./conf/.env-runtime
+    volumes:
+      - ./volumes/ldap/data:/var/lib/ldap
+      - ./volumes/ldap/config:/etc/ldap/slapd.d
+
+  ldap-admin:
+    image: ${DOCKER_REGISTRY}/${DOCKER_NAMESPACE}/${DOCKER_LDAP_ADMIN_IMAGE_NAME}:${DOCKER_LDAP_ADMIN_IMAGE_VERSION}
+    env_file:
+      - ./conf/.env-runtime
+    links:
+      - 'ldap:ldap'
+
+  reverse-proxy:
+    image: ${DOCKER_REGISTRY}/${DOCKER_NAMESPACE}/${DOCKER_REV_PROXY_IMAGE_NAME}:${DOCKER_REV_PROXY_IMAGE_VERSION}
+    env_file:
+      - ./conf/.env-runtime
+    links:
+      - 'ldap-admin:ldap-admin'
+      - 'gitlab:gitlab'
+      - 'jenkins:jenkins'
+      - 'sonar:sonar'
+      - 'nexus:nexus'
+      - 'selenium-hub:selenium-hub'
+    ports:
+      - '80:80'
+      - '443:443'
+      - '50000:50000'
+    volumes:
+      - './certs:/certs'
+
+  gitlab:
+    image: ${DOCKER_REGISTRY}/${DOCKER_NAMESPACE}/${DOCKER_GITLAB_IMAGE_NAME}:${DOCKER_GITLAB_IMAGE_VERSION}
+    env_file:
+      - ./conf/.env-runtime
+    links:
+      - 'ldap:ldap'
+    ports:
+      - '22:22'
+    volumes:
+      - './volumes/gitlab/config:/etc/gitlab'
+      - './volumes/gitlab/logs:/var/log/gitlab'
+      - './volumes/gitlab/data:/var/opt/gitlab'
+
+  jenkins:
+    image: ${DOCKER_REGISTRY}/${DOCKER_NAMESPACE}/${DOCKER_JENKINS_IMAGE_NAME}:${DOCKER_JENKINS_IMAGE_VERSION}
+    env_file:
+      - ./conf/.env-runtime
+    volumes:
+      - './certs/cacerts:/etc/ssl/certs/java/cacerts:ro'
+      - './volumes/jenkins:/var/jenkins_home'
+
+  sonar:
+    image: ${DOCKER_REGISTRY}/${DOCKER_NAMESPACE}/${DOCKER_SONAR_IMAGE_NAME}:${DOCKER_SONAR_IMAGE_VERSION}
+    env_file:
+      - ./conf/.env-runtime
+    links:
+      - 'sonar-db:sonar-db'
+    volumes:
+      - './certs/cacerts:/etc/ssl/certs/java/cacerts:ro'
+      - './volumes/sonar/data:/var/opt/sonarqube'
+
+  sonar-db:
+    image: ${DOCKER_REGISTRY}/${DOCKER_NAMESPACE}/${DOCKER_SONAR_DB_IMAGE_NAME}:${DOCKER_SONAR_DB_IMAGE_VERSION}
+    env_file:
+      - ./conf/.env-runtime
+    volumes:
+      - './volumes/sonar-db/data:/var/lib/postgresql/data'
+
+  nexus:
+    image: ${DOCKER_REGISTRY}/${DOCKER_NAMESPACE}/${DOCKER_NEXUS_IMAGE_NAME}:${DOCKER_NEXUS_IMAGE_VERSION}
+    env_file:
+      - ./conf/.env-runtime
+    links:
+      - 'ldap:ldap'
+    volumes:
+      - './certs/cacerts:/etc/ssl/certs/java/cacerts:ro'
+      - './volumes/nexus/data:/nexus-data'
+
+  selenium-hub:
+    image: ${DOCKER_REGISTRY}/${DOCKER_NAMESPACE}/${DOCKER_SELENIUM_HUB_IMAGE_NAME}:${DOCKER_SELENIUM_HUB_IMAGE_VERSION}
+    env_file:
+      - ./conf/.env-runtime
+
+  selenium-node-chrome:
+    image: ${DOCKER_REGISTRY}/${DOCKER_NAMESPACE}/${DOCKER_SELENIUM_NODE_CHROME_IMAGE_NAME}:${DOCKER_SELENIUM_NODE_CHROME_IMAGE_VERSION}
+    env_file:
+      - ./conf/.env-runtime
+    links:
+      - 'selenium-hub:hub'
+
+  selenium-node-firefox:
+    image: ${DOCKER_REGISTRY}/${DOCKER_NAMESPACE}/${DOCKER_SELENIUM_NODE_FIREFOX_IMAGE_NAME}:${DOCKER_SELENIUM_NODE_FIREFOX_IMAGE_VERSION}
+    env_file:
+      - ./conf/.env-runtime
+    links:
+      - 'selenium-hub:hub'

@@ -1,0 +1,254 @@
+#!/bin/bash
+
+function ask() {
+  QUESTION=$1
+  DEFAULT=$2
+  read -p "${QUESTION} [${DEFAULT}]: " ANSWER
+  ANSWER=${ANSWER:-$DEFAULT}
+  echo ${ANSWER}
+}
+
+if [[ ! ${PROJECT_ROOT_DIR+x} ]]; then
+  read -p "Project Root Dir: " PROJECT_ROOT_DIR
+  export PROJECT_ROOT_DIR
+fi
+if [[ ! ${PROJECT_ROOT_DIR+x} ]]; then
+  echo "Environment variable 'PROJECT_ROOT_DIR' is not set!"
+  exit 1
+fi
+
+BASEDIR=$(dirname "$0")
+
+if [[ -f "${PROJECT_ROOT_DIR}/.env" ]]; then
+  source ${PROJECT_ROOT_DIR}/.env
+fi
+if [[ -f "${PROJECT_ROOT_DIR}/conf/.env-config" ]]; then
+  source ${PROJECT_ROOT_DIR}/conf/.env-config
+fi
+if [[ -f "${PROJECT_ROOT_DIR}/conf/.env-runtime" ]]; then
+  source ${PROJECT_ROOT_DIR}/conf/.env-runtime
+fi
+
+echo ""
+echo ""
+echo "General Settings"
+echo "================"
+TOOLSMITH_DOMAIN_TLD=$(                         ask "Toolsmith Domain (TLD)"                "com"                                                                                         )
+TOOLSMITH_DOMAIN_NAME=$(                        ask "Toolsmith Domain (Name)"               "example"                                                                                     )
+TOOLSMITH_DOCKER_IMAGE_PREFIX=$(                ask "Toolsmith Docker Image Prefix"         "toolsmith"                                                                                   )
+TOOLSMITH_DOCKER_IMAGE_VERSION=$(               ask "Toolsmith Docker Image Version"        "0.1.0"                                                                                       )
+TOOLSMITH_DOMAIN=${TOOLSMITH_DOMAIN_NAME}.${TOOLSMITH_DOMAIN_TLD}
+TOOLSMITH_DOMAIN_REV=${TOOLSMITH_DOMAIN_TLD}.${TOOLSMITH_DOMAIN_NAME}
+
+
+echo ""
+echo ""
+echo "Docker Settings"
+echo "==============="
+
+export DOCKER_REGISTRY=$(                              ask "Docker Registry"                       "${DOCKER_REGISTRY:-docker.io}"                                                                           )
+export DOCKER_NAMESPACE=$(                             ask "Docker Namespace"                      "${DOCKER_NAMESPACE:-example-user}"                                                                       )
+export DOCKER_MAINTAINER=$(                            ask "Docker Maintainer"                     "${DOCKER_MAINTAINER:-Example User <user@example.com>}"                                                   )
+export DOCKER_LABEL_GROUP=$(                           ask "Docker Label Group"                    "${DOCKER_LABEL_GROUP:-${TOOLSMITH_DOMAIN_REV}.system=toolsmith}"                                         )
+echo ""
+
+export DOCKER_REV_PROXY_IMAGE_NAME=$(                  ask "Reverse Proxy Image Name"              "${DOCKER_REV_PROXY_IMAGE_NAME:-${TOOLSMITH_DOCKER_IMAGE_PREFIX}-rev-proxy}"                              )
+export DOCKER_REV_PROXY_IMAGE_VERSION=$(               ask "Reverse Proxy Image Version"           "${DOCKER_REV_PROXY_IMAGE_VERSION:-${TOOLSMITH_DOCKER_IMAGE_VERSION}}"                                    )
+export DOCKER_REV_PROXY_LABEL_APP_GROUP=$(             ask "Reverse Proxy App Group"               "${DOCKER_REV_PROXY_LABEL_APP_GROUP:-${TOOLSMITH_DOMAIN_REV}.app.group=rev-proxy}"                        )
+export DOCKER_REV_PROXY_LABEL_APP_NAME=$(              ask "Reverse Proxy App Name"                "${DOCKER_REV_PROXY_LABEL_APP_NAME:-${TOOLSMITH_DOMAIN_REV}.app.group=rev-proxy}"                         )
+echo ""
+
+export DOCKER_LDAP_IMAGE_NAME=$(                       ask "LDAP Image Name"                       "${DOCKER_LDAP_IMAGE_NAME:-${TOOLSMITH_DOCKER_IMAGE_PREFIX}-ldap}"                                        )
+export DOCKER_LDAP_IMAGE_VERSION=$(                    ask "LDAP Image Version"                    "${DOCKER_LDAP_IMAGE_VERSION:-${TOOLSMITH_DOCKER_IMAGE_VERSION}}"                                         )
+export DOCKER_LDAP_LABEL_APP_GROUP=$(                  ask "LDAP App Group"                        "${DOCKER_LDAP_LABEL_APP_GROUP:-${TOOLSMITH_DOMAIN_REV}.app.group=ldap}"                                  )
+export DOCKER_LDAP_LABEL_APP_NAME=$(                   ask "LDAP App Name"                         "${DOCKER_LDAP_LABEL_APP_NAME:-${TOOLSMITH_DOMAIN_REV}.app.group=ldap}"                                   )
+echo ""
+
+export DOCKER_LDAP_ADMIN_IMAGE_NAME=$(                 ask "LDAP Admin Image Name"                 "${DOCKER_LDAP_ADMIN_IMAGE_NAME:-${TOOLSMITH_DOCKER_IMAGE_PREFIX}-admin}"                                 )
+export DOCKER_LDAP_ADMIN_IMAGE_VERSION=$(              ask "LDAP Admin Image Version"              "${DOCKER_LDAP_ADMIN_IMAGE_VERSION:-${TOOLSMITH_DOCKER_IMAGE_VERSION}}"                                   )
+export DOCKER_LDAP_ADMIN_LABEL_APP_GROUP=$(            ask "LDAP Admin App Group"                  "${DOCKER_LDAP_ADMIN_LABEL_APP_GROUP:-${TOOLSMITH_DOMAIN_REV}.app.group=ldap}"                            )
+export DOCKER_LDAP_ADMIN_LABEL_APP_NAME=$(             ask "LDAP Admin App Name"                   "${DOCKER_LDAP_ADMIN_LABEL_APP_NAME:-${TOOLSMITH_DOMAIN_REV}.app.group=ldap-admin}"                       )
+echo ""
+
+export DOCKER_GITLAB_IMAGE_NAME=$(                     ask "Gitlab Image Name"                     "${DOCKER_GITLAB_IMAGE_NAME:-${TOOLSMITH_DOCKER_IMAGE_PREFIX}-gitlab}"                                    )
+export DOCKER_GITLAB_IMAGE_VERSION=$(                  ask "Gitlab Image Version"                  "${DOCKER_GITLAB_IMAGE_VERSION:-${TOOLSMITH_DOCKER_IMAGE_VERSION}}"                                       )
+export DOCKER_GITLAB_LABEL_APP_GROUP=$(                ask "Gitlab App Group"                      "${DOCKER_GITLAB_LABEL_APP_GROUP:-${TOOLSMITH_DOMAIN_REV}.app.group=gitlab}"                              )
+export DOCKER_GITLAB_LABEL_APP_NAME=$(                 ask "Gitlab App Name"                       "${DOCKER_GITLAB_LABEL_APP_NAME:-${TOOLSMITH_DOMAIN_REV}.app.group=gitlab}"                               )
+echo ""
+
+export DOCKER_JENKINS_IMAGE_NAME=$(                    ask "Jenkins Image Name"                    "${DOCKER_JENKINS_IMAGE_NAME:-${TOOLSMITH_DOCKER_IMAGE_PREFIX}-jenkins}"                                  )
+export DOCKER_JENKINS_IMAGE_VERSION=$(                 ask "Jenkins Image Version"                 "${DOCKER_JENKINS_IMAGE_VERSION:-${TOOLSMITH_DOCKER_IMAGE_VERSION}}"                                      )
+export DOCKER_JENKINS_LABEL_APP_GROUP=$(               ask "Jenkins App Group"                     "${DOCKER_JENKINS_LABEL_APP_GROUP:-${TOOLSMITH_DOMAIN_REV}.app.group=jenkins}"                            )
+export DOCKER_JENKINS_LABEL_APP_NAME=$(                ask "Jenkins App Name"                      "${DOCKER_JENKINS_LABEL_APP_NAME:-${TOOLSMITH_DOMAIN_REV}.app.group=jenkins}"                             )
+echo ""
+
+export DOCKER_SONAR_IMAGE_NAME=$(                      ask "Sonar Image Name"                      "${DOCKER_SONAR_IMAGE_NAME:-${TOOLSMITH_DOCKER_IMAGE_PREFIX}-sonar}"                                      )
+export DOCKER_SONAR_IMAGE_VERSION=$(                   ask "Sonar Image Version"                   "${DOCKER_SONAR_IMAGE_VERSION:-${TOOLSMITH_DOCKER_IMAGE_VERSION}}"                                        )
+export DOCKER_SONAR_LABEL_APP_GROUP=$(                 ask "Sonar App Group"                       "${DOCKER_SONAR_LABEL_APP_GROUP:-${TOOLSMITH_DOMAIN_REV}.app.group=sonar}"                                )
+export DOCKER_SONAR_LABEL_APP_NAME=$(                  ask "Sonar App Name"                        "${DOCKER_SONAR_LABEL_APP_NAME:-${TOOLSMITH_DOMAIN_REV}.app.group=sonar}"                                 )
+echo ""
+
+export DOCKER_SONAR_DB_IMAGE_NAME=$(                   ask "Sonar DB Image Name"                   "${DOCKER_SONAR_DB_IMAGE_NAME:-${TOOLSMITH_DOCKER_IMAGE_PREFIX}-sonar-db}"                                )
+export DOCKER_SONAR_DB_IMAGE_VERSION=$(                ask "Sonar DB Image Version"                "${DOCKER_SONAR_DB_IMAGE_VERSION:-${TOOLSMITH_DOCKER_IMAGE_VERSION}}"                                     )
+export DOCKER_SONAR_DB_LABEL_APP_GROUP=$(              ask "Sonar DB App Group"                    "${DOCKER_SONAR_DB_LABEL_APP_GROUP:-${TOOLSMITH_DOMAIN_REV}.app.group=sonar}"                             )
+export DOCKER_SONAR_DB_LABEL_APP_NAME=$(               ask "Sonar DB App Name"                     "${DOCKER_SONAR_DB_LABEL_APP_NAME:-${TOOLSMITH_DOMAIN_REV}.app.group=sonar-db}"                           )
+echo ""
+
+export DOCKER_NEXUS_IMAGE_NAME=$(                      ask "Nexus Image Name"                      "${DOCKER_NEXUS_IMAGE_NAME:-${TOOLSMITH_DOCKER_IMAGE_PREFIX}-nexus}"                                      )
+export DOCKER_NEXUS_IMAGE_VERSION=$(                   ask "Nexus Image Version"                   "${DOCKER_NEXUS_IMAGE_VERSION:-${TOOLSMITH_DOCKER_IMAGE_VERSION}}"                                        )
+export DOCKER_NEXUS_LABEL_APP_GROUP=$(                 ask "Nexus App Group"                       "${DOCKER_NEXUS_LABEL_APP_GROUP:-${TOOLSMITH_DOMAIN_REV}.app.group=nexus}"                                )
+export DOCKER_NEXUS_LABEL_APP_NAME=$(                  ask "Nexus App Name"                        "${DOCKER_NEXUS_LABEL_APP_NAME:-${TOOLSMITH_DOMAIN_REV}.app.group=nexus}"                                 )
+echo ""
+
+export DOCKER_SELENIUM_HUB_IMAGE_NAME=$(               ask "Selenium Hub Image Name"               "${DOCKER_SELENIUM_HUB_IMAGE_NAME:-${TOOLSMITH_DOCKER_IMAGE_PREFIX}-selenium-hub}"                        )
+export DOCKER_SELENIUM_HUB_IMAGE_VERSION=$(            ask "Selenium Hub Image Version"            "${DOCKER_SELENIUM_HUB_IMAGE_VERSION:-${TOOLSMITH_DOCKER_IMAGE_VERSION}}"                                 )
+export DOCKER_SELENIUM_HUB_LABEL_APP_GROUP=$(          ask "Selenium Hub App Group"                "${DOCKER_SELENIUM_HUB_LABEL_APP_GROUP:-${TOOLSMITH_DOMAIN_REV}.app.group=selenium}"                      )
+export DOCKER_SELENIUM_HUB_LABEL_APP_NAME=$(           ask "Selenium Hub App Name"                 "${DOCKER_SELENIUM_HUB_LABEL_APP_NAME:-${TOOLSMITH_DOMAIN_REV}.app.group=selenium-hub}"                   )
+echo ""
+
+export DOCKER_SELENIUM_NODE_CHROME_IMAGE_NAME=$(       ask "Selenium Node Chrome Image Name"       "${DOCKER_SELENIUM_NODE_CHROME_IMAGE_NAME:-${TOOLSMITH_DOCKER_IMAGE_PREFIX}-selenium-node-chrome}"        )
+export DOCKER_SELENIUM_NODE_CHROME_IMAGE_VERSION=$(    ask "Selenium Node Chrome Image Version"    "${DOCKER_SELENIUM_NODE_CHROME_IMAGE_VERSION:-${TOOLSMITH_DOCKER_IMAGE_VERSION}}"                         )
+export DOCKER_SELENIUM_NODE_CHROME_LABEL_APP_GROUP=$(  ask "Selenium Node Chrome App Group"        "${DOCKER_SELENIUM_NODE_CHROME_LABEL_APP_GROUP:-${TOOLSMITH_DOMAIN_REV}.app.group=selenium}"              )
+export DOCKER_SELENIUM_NODE_CHROME_LABEL_APP_NAME=$(   ask "Selenium Node Chrome App Name"         "${DOCKER_SELENIUM_NODE_CHROME_LABEL_APP_NAME:-${TOOLSMITH_DOMAIN_REV}.app.name=selenium-node-chrome}"    )
+echo ""
+
+export DOCKER_SELENIUM_NODE_FIREFOX_IMAGE_NAME=$(      ask "Selenium Node Firefox Image Name"      "${DOCKER_SELENIUM_NODE_FIREFOX_IMAGE_NAME:-${TOOLSMITH_DOCKER_IMAGE_PREFIX}-selenium-node-firefox}"      )
+export DOCKER_SELENIUM_NODE_FIREFOX_IMAGE_VERSION=$(   ask "Selenium Node Firefox Image Version"   "${DOCKER_SELENIUM_NODE_FIREFOX_IMAGE_VERSION:-${TOOLSMITH_DOCKER_IMAGE_VERSION}}"                        )
+export DOCKER_SELENIUM_NODE_FIREFOX_LABEL_APP_GROUP=$( ask "Selenium Node Firefox App Group"       "${DOCKER_SELENIUM_NODE_FIREFOX_LABEL_APP_GROUP:-${TOOLSMITH_DOMAIN_REV}.app.name=selenium}"              )
+export DOCKER_SELENIUM_NODE_FIREFOX_LABEL_APP_NAME=$(  ask "Selenium Node Firefox App Name"        "${DOCKER_SELENIUM_NODE_FIREFOX_LABEL_APP_NAME:-${TOOLSMITH_DOMAIN_REV}.app.name=selenium-node-firefox}"  )
+
+
+echo ""
+echo ""
+echo "Hostname Settings"
+echo "================="
+export LDAP_HOSTNAME=$(                                ask "LDAP Hostname"                         "${LDAP_HOSTNAME:-ldap.${TOOLSMITH_DOMAIN}}"                                                              )
+export LDAP_ADMIN_HOSTNAME=$(                          ask "LDAP-Admin Hostname"                   "${LDAP_ADMIN_HOSTNAME:-ldap-admin.${TOOLSMITH_DOMAIN}}"                                                  )
+export GITLAB_HOSTNAME=$(                              ask "Gitlab Hostname"                       "${GITLAB_HOSTNAME:-gitlab.${TOOLSMITH_DOMAIN}}"                                                          )
+export DOCKER_REGISTRY_HOSTNAME=$(                     ask "Docker Registry Hostname"              "${DOCKER_REGISTRY_HOSTNAME:-registry.${TOOLSMITH_DOMAIN}}"                                               )
+export MATTERMOST_HOSTNAME=$(                          ask "Mattermost Hostname"                   "${MATTERMOST_HOSTNAME:-mattermost.${TOOLSMITH_DOMAIN}}"                                                  )
+export JENKINS_HOSTNAME=$(                             ask "Jenkins Hostname"                      "${JENKINS_HOSTNAME:-jenkins.${TOOLSMITH_DOMAIN}}"                                                        )
+export SONAR_HOSTNAME=$(                               ask "Sonar Hostname"                        "${SONAR_HOSTNAME:-sonar.${TOOLSMITH_DOMAIN}}"                                                            )
+export SELENIUM_HOSTNAME=$(                            ask "Selenium Hostname"                     "${SELENIUM_HOSTNAME:-selenium.${TOOLSMITH_DOMAIN}}"                                                      )
+export NEXUS_HOSTNAME=$(                               ask "Nexus Hostname"                        "${NEXUS_HOSTNAME:-nexus.${TOOLSMITH_DOMAIN}}"                                                            )
+
+
+echo ""
+echo ""
+echo "Certificate Settings"
+echo "===================="
+export CERT_KEY_LENGTH=$(                              ask "Key Length"                            "${CERT_KEY_LENGTH:-2048}"                                                                                )
+export CERT_COUNTRY=$(                                 ask "Country (C)"                           "${CERT_COUNTRY:-CH}"                                                                                     )
+export CERT_STATE=$(                                   ask "State (ST)"                            "${CERT_STATE:-ZH}"                                                                                       )
+export CERT_LOCATION=$(                                ask "Location (L)"                          "${CERT_LOCATION:-Example Location}"                                                                      )
+export CERT_ORGANIZATION=$(                            ask "Organization (O)"                      "${CERT_ORGANIZATION:-${TOOLSMITH_DOMAIN}}"                                                               )
+export CERT_ORGNIZATIONAL_UNIT=$(                      ask "Organization Unit (OU)"                "${CERT_ORGNIZATIONAL_UNIT:-Private}"                                                                     )
+
+
+echo ""
+echo ""
+echo "Gitlab Settings"
+echo "==============="
+export GITLAB_ROOT_PASSWORD=$(                         ask "Root Password"                         "${GITLAB_ROOT_PASSWORD:-gitlab123}"                                                                      )
+export GITLAB_SMTP_USER_NAME=$(                        ask "SMTP Username"                         "${GITLAB_SMTP_USER_NAME:-gitlab@example.com}"                                                            )
+export GITLAB_SMTP_PASSWORD=$(                         ask "SMTP Password"                         "${GITLAB_SMTP_PASSWORD:-gitlabsmtp123}"                                                                  )
+export GITLAB_EMAIL_FROM=$(                            ask "E-Mail From (Gitlab)"                  "${GITLAB_EMAIL_FROM:-gitlab@example.com}"                                                                )
+export GITLAB_EMAIL_REPLY_TO=$(                        ask "E-Mail Reply To"                       "${GITLAB_EMAIL_REPLY_TO:-noreply@example.com}"                                                           )
+
+echo ""
+echo ""
+echo "Mattermost Settings"
+echo "==================="
+export MATTERMOST_SMTP_USER_NAME=$(                    ask "SMTP Username"                         "${MATTERMOST_SMTP_USER_NAME:-gitlab@example.com}"                                                        )
+export MATTERMOST_SMTP_PASSWORD=$(                     ask "SMTP Password"                         "${MATTERMOST_SMTP_PASSWORD:-mattermostsmtp123}"                                                          )
+export MATTERMOST_FEEDBACK_EMAIL=$(                    ask "E-Mail From (Mattermost)"              "${MATTERMOST_FEEDBACK_EMAIL:-gitlab@example.com}"                                                        )
+
+echo ""
+echo ""
+echo "LDAP Settings"
+echo "============="
+export LDAP_BASE_DN=$(                                 ask "Base DN"                               "${LDAP_BASE_DN:-dc=${TOOLSMITH_DOMAIN_NAME},dc=${TOOLSMITH_DOMAIN_TLD}}"                                 )
+export LDAP_DOMAIN=$(                                  ask "Domain"                                "${LDAP_DOMAIN:-${TOOLSMITH_DOMAIN}}"                                                                     )
+export LDAP_ORGANISATION=$(                            ask "Organisation"                          "${LDAP_ORGANISATION:-${TOOLSMITH_DOMAIN}}"                                                               )
+export LDAP_ENGINEER_ADMIN_EMAIL=$(                    ask "Engineer Admin E-Mail"                 "${LDAP_ENGINEER_ADMIN_EMAIL:-engineer.admin@example.com}"                                                )
+export LDAP_ENGINEER_USER_EMAIL=$(                     ask "Engineer User E-Mail"                  "${LDAP_ENGINEER_USER_EMAIL:-engineer.user@example.com}"                                                  )
+export LDAP_ADMIN_PASSWORD=$(                          ask "Admin Password"                        "${LDAP_ADMIN_PASSWORD:-admin123}"                                                                        )
+export LDAP_CONFIG_PASSWORD=$(                         ask "Config Password"                       "${LDAP_CONFIG_PASSWORD:-config123}"                                                                      )
+export LDAP_READONLY_USER_PASSWORD=$(                  ask "Read-Only Password"                    "${LDAP_READONLY_USER_PASSWORD:-readonly123}"                                                             )
+
+echo ""
+echo ""
+echo "LDAP Admin Settings"
+echo "==================="
+export LDAP_ADMIN_EMAIL=$(                             ask "Admin E-Mail"                          "${LDAP_ADMIN_EMAIL:-gitlab@example.com}"                                                                 )
+
+echo ""
+echo ""
+echo "Jenkins Settings"
+echo "================"
+export JENKINS_ADMIN_USER=$(                           ask "Admin User"                            "${JENKINS_ADMIN_USER:-admin}"                                                                            )
+export JENKINS_ADMIN_PASSWORD=$(                       ask "Admin Password"                        "${JENKINS_ADMIN_PASSWORD:-admin123}"                                                                     )
+
+
+echo ""
+echo ""
+echo "Sonar Settings - Generated"
+echo "=========================="
+export SONARQUBE_JDBC_USERNAME=${SONARQUBE_JDBC_USERNAME:-sonar}
+echo "JDBC Username: ${SONARQUBE_JDBC_USERNAME}"
+export SONARQUBE_JDBC_URL=${SONARQUBE_JDBC_URL:-jdbc:postgresql://sonar-db:5432/sonar}
+echo "JDBC URL: ${SONARQUBE_JDBC_URL}"
+export SONARQUBE_WEB_JVM_OPTS=${SONARQUBE_WEB_JVM_OPTS:-""}
+echo "JVM Options: ${SONARQUBE_WEB_JVM_OPTS}"
+
+
+echo ""
+echo ""
+echo "OAuth2 Settings - Generated"
+echo "==========================="
+export GITLAB_OAUTH_APP_MATTERMOST_ID=${GITLAB_OAUTH_APP_MATTERMOST_ID:-$( openssl rand -hex 32 )}
+export GITLAB_OAUTH_APP_MATTERMOST_SECRET=${GITLAB_OAUTH_APP_MATTERMOST_SECRET:-$( openssl rand -hex 32 )}
+export GITLAB_OAUTH_APP_MATTERMOST_REDIRCT_URI="https://${MATTERMOST_HOSTNAME}/signup/gitlab/complete"$'\r'$'\n'"https://${MATTERMOST_HOSTNAME}/login/gitlab/complete"
+echo "Mattermost Id: ${GITLAB_OAUTH_APP_MATTERMOST_ID}"
+echo "Mattermost Secret: ${GITLAB_OAUTH_APP_MATTERMOST_SECRET}"
+echo "Mattermost Redirect URI: ${GITLAB_OAUTH_APP_MATTERMOST_REDIRCT_URI}"
+
+export GITLAB_OAUTH_APP_JENKINS_ID=${GITLAB_OAUTH_APP_JENKINS_ID:-$( openssl rand -hex 32 )}
+export GITLAB_OAUTH_APP_JENKINS_SECRET=${GITLAB_OAUTH_APP_JENKINS_SECRET:-$( openssl rand -hex 32 )}
+export GITLAB_OAUTH_APP_JENKINS_REDIRCT_URI="https://${JENKINS_HOSTNAME}/securityRealm/finishLogin"
+echo "Jenkins Id: ${GITLAB_OAUTH_APP_JENKINS_ID}"
+echo "Jenkins Secret: ${GITLAB_OAUTH_APP_JENKINS_SECRET}"
+echo "Jenkins Redirect URI: ${GITLAB_OAUTH_APP_JENKINS_REDIRCT_URI}"
+
+export GITLAB_OAUTH_APP_SONAR_ID=${GITLAB_OAUTH_APP_SONAR_ID:-$( openssl rand -hex 32 )}
+export GITLAB_OAUTH_APP_SONAR_SECRET=${GITLAB_OAUTH_APP_SONAR_SECRET:-$( openssl rand -hex 32 )}
+export GITLAB_OAUTH_APP_SONAR_REDIRCT_URI="https://${SONAR_HOSTNAME}/oauth2/callback/gitlab"
+echo "Sonar Id: ${GITLAB_OAUTH_APP_SONAR_ID}"
+echo "Sonar Secret: ${GITLAB_OAUTH_APP_SONAR_SECRET}"
+echo "Sonar Redirect URI: ${GITLAB_OAUTH_APP_SONAR_REDIRCT_URI}"
+
+echo ""
+echo ""
+echo "Copy config files / create project directory"
+echo "============================================"
+
+echo " ---> Create directory '${PROJECT_ROOT_DIR}'"
+mkdir -p ${PROJECT_ROOT_DIR}
+
+echo " ---> Create directory '${PROJECT_ROOT_DIR}/conf'"
+mkdir -p ${PROJECT_ROOT_DIR}/conf
+
+echo " ---> Copy configuration file '.env'"
+envsubst < ${BASEDIR}/.env > ${PROJECT_ROOT_DIR}/.env
+
+echo " ---> Copy configuration file '.env-runtime'"
+envsubst < ${BASEDIR}/.env-runtime > ${PROJECT_ROOT_DIR}/conf/.env-runtime
+
+echo " ---> Copy configuration file '.env-config'"
+envsubst < ${BASEDIR}/.env-config > ${PROJECT_ROOT_DIR}/conf/.env-config
+
+echo " ---> Copy file 'docker-compose.yml'"
+cp ${BASEDIR}/docker-compose.yml ${PROJECT_ROOT_DIR}
+
+echo ""
+echo ""
