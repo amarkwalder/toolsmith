@@ -9,37 +9,38 @@ function ask() {
 }
 
 if [[ ! ${PROJECT_ROOT_DIR+x} ]]; then
-  read -p "Project Root Dir: " PROJECT_ROOT_DIR
-  export PROJECT_ROOT_DIR
-fi
-if [[ ! ${PROJECT_ROOT_DIR+x} ]]; then
   echo "Environment variable 'PROJECT_ROOT_DIR' is not set!"
   exit 1
 fi
 
 BASEDIR=$(dirname "$0")
 
+NEW_SETUP=true
 if [[ -f "${PROJECT_ROOT_DIR}/.env" ]]; then
   source ${PROJECT_ROOT_DIR}/.env
+  NEW_SETUP=false
 fi
 if [[ -f "${PROJECT_ROOT_DIR}/conf/.env-config" ]]; then
   source ${PROJECT_ROOT_DIR}/conf/.env-config
+  NEW_SETUP=false
 fi
 if [[ -f "${PROJECT_ROOT_DIR}/conf/.env-runtime" ]]; then
   source ${PROJECT_ROOT_DIR}/conf/.env-runtime
+  NEW_SETUP=false
 fi
 
-echo ""
-echo ""
-echo "General Settings"
-echo "================"
-TOOLSMITH_DOMAIN_TLD=$(                         ask "Toolsmith Domain (TLD)"                "com"                                                                                         )
-TOOLSMITH_DOMAIN_NAME=$(                        ask "Toolsmith Domain (Name)"               "example"                                                                                     )
-TOOLSMITH_DOCKER_IMAGE_PREFIX=$(                ask "Toolsmith Docker Image Prefix"         "toolsmith"                                                                                   )
-TOOLSMITH_DOCKER_IMAGE_VERSION=$(               ask "Toolsmith Docker Image Version"        "0.1.0"                                                                                       )
-TOOLSMITH_DOMAIN=${TOOLSMITH_DOMAIN_NAME}.${TOOLSMITH_DOMAIN_TLD}
-TOOLSMITH_DOMAIN_REV=${TOOLSMITH_DOMAIN_TLD}.${TOOLSMITH_DOMAIN_NAME}
-
+if [[ "${NEW_SETUP}" == "true" ]]; then
+  echo ""
+  echo ""
+  echo "General Settings"
+  echo "================"
+  TOOLSMITH_DOMAIN_TLD=$(                         ask "Toolsmith Domain (TLD)"                "com"                                                                                         )
+  TOOLSMITH_DOMAIN_NAME=$(                        ask "Toolsmith Domain (Name)"               "example"                                                                                     )
+  TOOLSMITH_DOCKER_IMAGE_PREFIX=$(                ask "Toolsmith Docker Image Prefix"         "toolsmith"                                                                                   )
+  TOOLSMITH_DOCKER_IMAGE_VERSION=$(               ask "Toolsmith Docker Image Version"        "0.1.0"                                                                                       )
+  TOOLSMITH_DOMAIN=${TOOLSMITH_DOMAIN_NAME}.${TOOLSMITH_DOMAIN_TLD}
+  TOOLSMITH_DOMAIN_REV=${TOOLSMITH_DOMAIN_TLD}.${TOOLSMITH_DOMAIN_NAME}
+fi
 
 echo ""
 echo ""

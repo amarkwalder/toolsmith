@@ -1,3 +1,7 @@
+ifndef PROJECT_ROOT_DIR
+    $(error PROJECT_ROOT_DIR is undefined)
+endif
+
 define sep
 	@echo ""
 	@echo ""
@@ -22,8 +26,8 @@ clean-all:
 
 project:
 	$(call sep)
-	$(call colorecho,"= Create a Project")
-	$(call colorecho,"==================")
+	$(call colorecho,"= Setup Project")
+	$(call colorecho,"===============")
 	@exec $(MAKE) -C project-template project
 #-------------------------------------------------------------------------------
 
