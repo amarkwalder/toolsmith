@@ -12,3 +12,9 @@ Start a terminal / shell and clone the present GIT repository to your machine.
 ```
 git clone https://github.com/amarkwalder/toolsmith.git
 ```
+
+
+TODO:
+- Push of images
+- Reqs check
+- Upate README.md
